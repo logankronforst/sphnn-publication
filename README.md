@@ -20,3 +20,16 @@ The `cascaded tanks` and `additive manufacturing surrogate` experiments require 
 The data pertaining to the remaining experiments is included within this codebase and has been provided with the explicit consent of the respective authors.
 
 Trained model weights are included and are loaded per default in each script. To rerun any experiment change the `save_dir` variable in each notebook under the section "Set Hyperparameters" to the new directory where the weights from the rerun should be saved.
+
+## Data caching
+
+The spinning rigid body experiment caches generated trajectories to avoid regenerating on every run:
+
+- Cache file: `data/spinning_rigid_body/rigid_body_dataset.npz`
+- Regenerate: set `force_regen = True` in `experiments/spinning_rigid_body/spinning_rigid_body.ipynb` or delete the cache file
+
+The same experiment also caches model artifacts per run under `experiments/spinning_rigid_body/results/run_0/`:
+
+- Weights: `weights.eqx`
+- History: `history.npz`
+- Metrics: `error_measures.npz`
