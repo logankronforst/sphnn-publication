@@ -1,6 +1,6 @@
 # Stable Port-Hamiltonian Neural Networks (S-PHNN)
 
-* **Paper:** [Stable Port-Hamiltonian Neural Networks (arXiv:2502.02480)](https://arxiv.org/html/2502.02480v2)
+* **Paper:** 
 * **GitHub:** [CPShub/sphnn-publication](https://github.com/CPShub/sphnn-publication)
 * **Casmir Control Experiment GitHub:**  [rfarell/casmir-control](https://github.com/rfarell/casmir-control)
 
@@ -419,16 +419,23 @@ This is a canonical Hamiltonian system modeling a rigid body rotating in 3D spac
         $$J(\boldsymbol{\omega}) = \mathbf{I}^{-1} \begin{bmatrix} 0 & -\omega_3 I_3 & \omega_2 I_2 \\ \omega_3 I_3 & 0 & -\omega_1 I_1 \\ -\omega_2 I_2 & \omega_1 I_1 & 0 \end{bmatrix} \mathbf{I}^{-1}$$
 * **Data generation (from `experiments/spinning_rigid_body/spinning_rigid_body.ipynb`):**
     * **Parameters:** $\mathbf{I} = \text{diag}(1,2,3)$, $\mu = 0.01$ (set $\mu = 0$ for strictly conservative)
-    * **Train time grid:** $t \in [0, 200]$ with $N = 1000$ points, so $\Delta t = 200/999 \approx 0.20020$s.
+    * **Train time grid:** $t \in [0, 50]$ with $N = 1000$ points, so $\Delta t = 50/999 \approx 0.05005$s.
+    * **Test time grid:** $t \in [0, 200]$ with $N = 1000$ points, so $\Delta t = 200/999 \approx 0.20020$s.
     * **Initial conditions:** $x_0 \sim \text{Uniform}(0,1)^3$, then squared component-wise (`x0s_train = x0s_train**2`), seed 0.
         * Note: as written `x0s_test = x0s_train**2`, so test ICs are deterministic from the train samples (fourth power from the original uniform draw), not a fresh draw. 
     * **Derivative data:** analytic $\dot{\omega}$ evaluated on each grid and flattened. 
 * **Dataset sizes:** 
-    * **Train trajectories:** 10 x 1000 = 3 -> 10,000 time samples
-    * **Test trajectories:** 10 x 1000 -> 10,000 time samples
+    * **Train trajectories:** 10 x 1000 = 3 $\rightarrow{}$ 10,000 time samples
+    * **Test trajectories:** 10 x 1000 $\rightarrow$ 10,000 time samples
     * **Derivative data:** 10,000 x 3 samples per split (flattened grid).
 * **Dataset visualization:**
 ![spinning_rigid_body_dataset](https://hackmd.io/_uploads/BJHPUQiNbg.png)
+* **Data Caching:**
+    * **Cache file:** `data/spinning_rigid_body/rigid_body_dataset.npz` (train/test trajectories, derivatives, and initial conditions).
+    * **Entry point:** `experiments/spinning_rigid_body/spinning_rigid_body.ipynb` under `### Generate data (cached)`.
+    * **Regenerate:** set `force_regen = True` in the same cell or delete the cache file.
+    * **Path fix:** `project_dir` is set relative to `Path.cwd()` and adjusted when running from `experiments/` or `spinning_rigid_body/` so the cache always resolves to the repo-level `data/` directory.
+    * **Why this matters:** locking the generated trajectories ensures all model variants train and benchmark against the exact same ground truth, so differences in metrics reflect model changes rather than regenerated data. It also speeds reruns and makes long-horizon stability comparisons reproducible across machines and reruns.
 
 
 ### 2. Cascaded Tanks (Dissipative + Control)
