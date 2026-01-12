@@ -479,14 +479,22 @@ A standard nonlinear system identification benchmark featuring two water tanks i
 * **Dataset visualization:**
     * Plot train/validation input + output (same style as the notebook) and save as `experiments/cascaded_tanks/figures/cascaded_tanks_dataset.png`.
     * Embed the figure in this section once generated.
-* **Benchmarking metrics (per instance; stored in `error_measures.npz`):**
-    * **`train_rmse`:** RMSE on the training trajectory.
-    * **`test_rmse`:** RMSE on the validation/test trajectory.
-    * **Aggregate across instances:** report median + IQR across 20 instances per model (boxplot or violin plot in the notebook).
-    * **sPHNN-LM equilibrium:** report min/max/best-instance equilibrium location from `derivative_model.hamiltonian.minimum`.
-* **Benchmarking notes:**
-    * Compare `error_measures.npz` across model variants and runs.
-    * Extended test appends 400s of zero input after $t=4096$; outputs should drain toward 0.
+* **Benchmarking metrics (run_0; stored in `error_measures.npz`, n=20 instances/model):**
+    * **Per-instance fields:** `train_rmse` and `test_rmse`.
+    * **Aggregate (median [Q1, Q3]):**
+        | Model | Train RMSE | Test RMSE |
+        | --- | --- | --- |
+        | sPHNN | 0.132 [0.123, 0.141] | 0.321 [0.308, 0.364] |
+        | sPHNN-LM | 0.133 [0.127, 0.146] | 0.351 [0.327, 0.374] |
+        | cPHNN | 0.167 [0.114, 0.209] | 0.330 [0.308, 0.390] |
+        | PHNN | 0.365 [0.194, 0.671] | 0.545 [0.344, 1.714] |
+        | NODE | 0.351 [0.301, 0.451] | 0.688 [0.605, 0.905] |
+* **Benchmarking notes (run_0):**
+    * Stable models (sPHNN/sPHNN-LM/cPHNN) cluster around test RMSE medians 0.32-0.35 with tighter IQRs than PHNN/NODE.
+    * PHNN shows the largest test spread (Q3 ~1.714), indicating occasional unstable rollouts.
+    * `error_measures.npz` only logs train/test RMSE; the extended 400s zero-input rollout is not captured in these artifacts.
+    * Per-instance training time medians (from `history.npz`): sPHNN-LM 639s, sPHNN 648s, cPHNN 313s, PHNN 348s, NODE 370s.
+    * sPHNN-LM equilibrium locations are not logged in run_0 artifacts; need to compute from weights if we want min/max/best-instance `derivative_model.hamiltonian.minimum`.
 * **GPU usage sanity check:**
     * Default notebooks run on a single device; multi-GPU requires explicit parallelization (e.g., JAX `pmap`/`pjit`).
     * Check device visibility with `jax.local_device_count()` / `jax.devices()` and confirm activity with `nvidia-smi` during runs.
