@@ -432,6 +432,7 @@ This is a canonical Hamiltonian system modeling a rigid body rotating in 3D spac
 ![spinning_rigid_body_dataset](https://hackmd.io/_uploads/BJHPUQiNbg.png)
 * **Data Caching:**
     * **Cache file:** `data/spinning_rigid_body/rigid_body_dataset.npz` (train/test trajectories, derivatives, and initial conditions).
+    * **Checksum (SHA256):** `9c2abdc17f9a33b1159342292613c327e3688b3e34801683afd48df15d41774e`.
     * **Entry point:** `experiments/spinning_rigid_body/spinning_rigid_body.ipynb` under `### Generate data (cached)`.
     * **Regenerate:** set `force_regen = True` in the same cell or delete the cache file.
     * **Path fix:** `project_dir` is set relative to `Path.cwd()` and adjusted when running from `experiments/` or `spinning_rigid_body/` so the cache always resolves to the repo-level `data/` directory.
@@ -460,6 +461,35 @@ A standard nonlinear system identification benchmark featuring two water tanks i
     * **Source:** [Cascaded Tanks Benchmark](https://www.nonlinearbenchmark.org/benchmarks/cascaded-tanks).
     * **Input:** Multisine signals (sum of sinusoids with random phases) to excite frequencies in the $[0, 0.0144] \text{ Hz}$ range.
     * **Size:** 1024 time steps per trajectory with a sampling period of $T_s = 4\text{s}$.
+* **Data preparation and caching:**
+    * **Dataset file:** `data/cascaded_tanks/dataBenchmark.mat` (external; keep stable and record checksum if updated).
+    * **Checksum (SHA256):** `cb2f88d4388be4d3f2a24c6402fba804976aac5f2e1f26cda59ea0a38d016eab`.
+    * **Entry point:** `experiments/cascaded_tanks/cascaded_tanks.ipynb`.
+    * **Train/validation splits:** `yEst/uEst` for training, `yVal/uVal` for validation/test (stacked to `(1, T, 1)`).
+    * **Time grid:** `ts = 4.0 * arange(T)` with `T = 1024` (matches $T_s = 4\text{s}$).
+    * **Path fix (Linux):** notebook uses `Path('../../data') / 'cascaded_tanks' / 'dataBenchmark.mat'`; avoid Windows-style backslashes.
+    * **Why this matters:** locking the dataset keeps RMSE and long-horizon stability comparisons consistent across models and reruns.
+* **Dataset sizes:**
+    * **Train trajectories:** 1 x 1024 time steps (`yEst/uEst`, stacked to `(1, T, 1)`).
+    * **Validation/Test trajectories:** 1 x 1024 time steps (`yVal/uVal`, stacked to `(1, T, 1)`).
+    * **Instances:** `num_instances = 20` per model (from `experiments/cascaded_tanks/results/run_0/hyperparameters.json`).
+* **Artifacts and save paths:**
+    * **Hyperparameters:** `experiments/cascaded_tanks/results/run_0/hyperparameters.json`.
+    * **Per-instance artifacts:** `experiments/cascaded_tanks/results/run_0/<model>/instance_<id>/` (includes `weights.eqx`, `history.npz`, `error_measures.npz`).
+* **Dataset visualization:**
+    * Plot train/validation input + output (same style as the notebook) and save as `experiments/cascaded_tanks/figures/cascaded_tanks_dataset.png`.
+    * Embed the figure in this section once generated.
+* **Benchmarking metrics (per instance; stored in `error_measures.npz`):**
+    * **`train_rmse`:** RMSE on the training trajectory.
+    * **`test_rmse`:** RMSE on the validation/test trajectory.
+    * **Aggregate across instances:** report median + IQR across 20 instances per model (boxplot or violin plot in the notebook).
+    * **sPHNN-LM equilibrium:** report min/max/best-instance equilibrium location from `derivative_model.hamiltonian.minimum`.
+* **Benchmarking notes:**
+    * Compare `error_measures.npz` across model variants and runs.
+    * Extended test appends 400s of zero input after $t=4096$; outputs should drain toward 0.
+* **GPU usage sanity check:**
+    * Default notebooks run on a single device; multi-GPU requires explicit parallelization (e.g., JAX `pmap`/`pjit`).
+    * Check device visibility with `jax.local_device_count()` / `jax.devices()` and confirm activity with `nvidia-smi` during runs.
 
 ### 3. Thermal Food Processing (High-Dimensional PDE)
 A "surrogate modeling" task where the neural network learns the dynamics of a reduced-order latent space derived from a high-fidelity Finite Element Method (FEM) simulation.

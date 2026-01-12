@@ -2,6 +2,7 @@
 
 ## Cache Location and Entry Point
 - Cache file: `data/spinning_rigid_body/rigid_body_dataset.npz`.
+- Checksum (SHA256): `9c2abdc17f9a33b1159342292613c327e3688b3e34801683afd48df15d41774e`.
 - Notebook entry point: `experiments/spinning_rigid_body/spinning_rigid_body.ipynb` under `### Generate data (cached)`.
 - Path handling: `project_dir = Path.cwd()` is adjusted when running from `experiments/` or `spinning_rigid_body/` so the cache resolves to repo-level `data/`.
 
