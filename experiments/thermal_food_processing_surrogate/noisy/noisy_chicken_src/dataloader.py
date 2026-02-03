@@ -1,10 +1,28 @@
 
 from dataclasses import dataclass
+import os
+from pathlib import Path
 import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
 from dynax.data_handling import Normalizer
 from .datareader import load_chicken, load_long_chicken
+
+
+def _load_npz_dataset(data_path: Path, num_train: int | None) -> tuple[np.ndarray, ...]:
+    with np.load(data_path) as data:
+        ts_train = data["ts_train"]
+        ys_train = data["ys_train"]
+        us_train = data["us_train"]
+        ts_vali = data["ts_vali"]
+        ys_vali = data["ys_vali"]
+        us_vali = data["us_vali"]
+
+    if num_train is not None:
+        ys_train = ys_train[:num_train]
+        us_train = us_train[:num_train]
+
+    return ts_train, ys_train, us_train, ts_vali, ys_vali, us_vali
 
 fair_test_groups = {
         "AP15":     [313, 320, 344, 378, 383, 407, 412, 415, 461, 462, 466, 467, 474, 508, 528,],
@@ -54,14 +72,30 @@ class DataSet:
 
 
 def prepare_data(
-        train_ids = [745, 795], 
+        train_ids = [745, 795],
         test_ids = fair_test_groups["AP15"]
     ):
 
+    data_npz = os.environ.get("THERMAL_FOOD_DATA_NPZ")
+    num_train_env = os.environ.get("THERMAL_FOOD_NUM_TRAIN")
+    num_train = int(num_train_env) if num_train_env else None
+    using_npz = False
+
     # Stitch together the training data
-    ts_train, ys_train, us_train = load_chicken(train_ids)
-    ts_vali, ys_vali, us_vali = load_chicken(test_ids)
-    ts_long, y_long, u_long = load_long_chicken()
+    if data_npz:
+        data_path = Path(data_npz)
+        if not data_path.is_file():
+            raise FileNotFoundError(f"THERMAL_FOOD_DATA_NPZ not found: {data_path}")
+        if num_train is None:
+            num_train = 2
+        ts_train, ys_train, us_train, ts_vali, ys_vali, us_vali = _load_npz_dataset(
+            data_path, num_train
+        )
+        using_npz = True
+    else:
+        ts_train, ys_train, us_train = load_chicken(train_ids)
+        ts_vali, ys_vali, us_vali = load_chicken(test_ids)
+        ts_long, y_long, u_long = load_long_chicken()
 
     # ### Compute the normalized data ###
     # The models are trained on normalized data and then the trained models are wrapped
@@ -101,7 +135,9 @@ def prepare_data(
         train        = DataSet(ts_train, ys_train, us_train),
         test         = DataSet(ts_vali, ys_vali, us_vali),
         test_delayed = DataSet(ts_test_delayed, ys_test_delayed, us_test_delayed),
-        long         = DataSet(ts_long, y_long[None, :], u_long[None, :]),
     )
+
+    if not using_npz:
+        data["long"] = DataSet(ts_long, y_long[None, :], u_long[None, :])
 
     return data, t_normalizer, y_normalizer, u_normalizer

@@ -3,6 +3,7 @@
 import jax.random as jr
 
 import json
+import os
 from pathlib import Path
 from multiprocessing import Pool
 
@@ -63,14 +64,19 @@ def run(params: dict, return_results=False):
         model, t_normalizer, y_normalizer, u_normalizer
     )
 
-    error_measures = evaluate_model(
-        wrapped_model,
-        metrics_dir=directory,
+    eval_sets = dict(
         train=data["train"],
         train_noisy=data["train_noisy"],
         test=data["test"],
         delayed_test=data["test_delayed"],
-        long_data=data["long"],
+    )
+    if "long" in data:
+        eval_sets["long_data"] = data["long"]
+
+    error_measures = evaluate_model(
+        wrapped_model,
+        metrics_dir=directory,
+        **eval_sets,
     )
 
     # Create results dictionary
@@ -144,5 +150,7 @@ def get_results(experiment_dir: Path, parallel=False):
 
 
 if __name__ == "__main__":
-    SAVE_DIR = Path(R"icml_experiments\noisy_chicken_data\results\run_0")
-    get_results(SAVE_DIR, parallel=True)
+    default_dir = Path(__file__).resolve().parent / "results" / "run_0"
+    save_dir = Path(os.environ.get("THERMAL_FOOD_NOISY_SAVE_DIR", default_dir))
+    parallel = os.environ.get("THERMAL_FOOD_NOISY_PARALLEL", "0") == "1"
+    get_results(save_dir, parallel=parallel)

@@ -17,9 +17,13 @@
 - Local headless runs:
   - `bash scripts/idev/run_rigid_body.sh`
   - `bash scripts/idev/run_cascaded_tanks.sh`
+  - `bash scripts/idev/run_thermal_food_processing_surrogate.sh`
+  - `bash scripts/idev/run_additive_manufacturing_surrogate.sh`
 - TACC jobs:
   - `sbatch scripts/slurm/run_spinning_rigid_body.slurm`
   - `sbatch scripts/slurm/run_cascaded_tanks.slurm`
+  - `sbatch scripts/slurm/run_thermal_food_processing_surrogate.slurm`
+  - `sbatch scripts/slurm/run_additive_manufacturing_surrogate.slurm`
   - logs: `slurm-*.out` / `slurm-*.err`
 - Caution: idev/compute jobs should be run by the user; the agent should provide the exact commands to run but avoid launching jobs directly.
 - Resource guidance: cascaded tanks prep/plots and quick tests are CPU-friendly; use vm-small/CPU idev when possible and request GPU only for longer training runs.
@@ -56,6 +60,16 @@
 - Thermal food processing (Section 4.3): n_D=2 trajectories of 280 samples; RMSE on 15 test trajectories across n_A/n_D; check stability beyond t=1395. Noise test uses n_A=3, n_D=2, evaluate on clean test.
 - Additive manufacturing surrogate (Section 4.4): POD to 40-dim latent; RMSE over 25 trajectories should peak <30 then decay; NODE/PHNN diverge.
 - Always cross-check `HACK.md` and update it with what matches, what breaks, and any training/testing changes; compare `error_measures.npz` and long-horizon stability plots between runs.
+
+## Metrics Reproduction
+- Thermal food processing summary table:
+  - `python scripts/report_thermal_food_processing_metrics.py`
+- Thermal food processing dataset plot:
+  - `python scripts/plot_thermal_food_processing_dataset.py`
+- Additive manufacturing summary table:
+  - `python scripts/report_additive_manufacturing_metrics.py`
+- Additive manufacturing dataset plot:
+  - `python scripts/plot_additive_manufacturing_dataset.py`
 
 ## Status Reporting (PI Request)
 Hi @Logan Kronforst, thanks for the update on the machine situation. Quick follow-up on SPHNN from yesterday.

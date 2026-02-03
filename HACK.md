@@ -489,12 +489,13 @@ A standard nonlinear system identification benchmark featuring two water tanks i
         | cPHNN | 0.167 [0.114, 0.209] | 0.330 [0.308, 0.390] |
         | PHNN | 0.365 [0.194, 0.671] | 0.545 [0.344, 1.714] |
         | NODE | 0.351 [0.301, 0.451] | 0.688 [0.605, 0.905] |
+    * **sPHNN-LM equilibrium (first coordinate; run_0 executed notebook):** min -0.196, max 0.432, best-instance 0.349 (best = lowest test RMSE).
 * **Benchmarking notes (run_0):**
     * Stable models (sPHNN/sPHNN-LM/cPHNN) cluster around test RMSE medians 0.32-0.35 with tighter IQRs than PHNN/NODE.
     * PHNN shows the largest test spread (Q3 ~1.714), indicating occasional unstable rollouts.
-    * `error_measures.npz` only logs train/test RMSE; the extended 400s zero-input rollout is not captured in these artifacts.
+    * Extended zero-input rollout in `cascaded_tanks.executed.ipynb` appends `n_extra=200` steps (800s at 4s) with zero input; all 20 instances per model integrate successfully (per `get_prediction_statistics` output).
+    * `error_measures.npz` only logs train/test RMSE; tail-to-zero metrics for the extended rollout are not stored in run_0 artifacts.
     * Per-instance training time medians (from `history.npz`): sPHNN-LM 639s, sPHNN 648s, cPHNN 313s, PHNN 348s, NODE 370s.
-    * sPHNN-LM equilibrium locations are not logged in run_0 artifacts; need to compute from weights if we want min/max/best-instance `derivative_model.hamiltonian.minimum`.
 * **GPU usage sanity check:**
     * Default notebooks run on a single device; multi-GPU requires explicit parallelization (e.g., JAX `pmap`/`pjit`).
     * Check device visibility with `jax.local_device_count()` / `jax.devices()` and confirm activity with `nvidia-smi` during runs.
@@ -514,6 +515,53 @@ A "surrogate modeling" task where the neural network learns the dynamics of a re
 * **Dataset Specifics:**
     * **Source:** FEM simulations using COMSOL Multiphysics.
     * **Quantity:** 25 simulation trajectories used for training/validation.
+* **Local data cache (noiseless notebooks):**
+    * **File:** `data/thermal_food_processing_surrogate/data.npz`.
+    * **Checksum (SHA256):** `d585e8108f1f3e82f3bb59d3cc1d218e4a4ea7d96bd984a3b63d5421ea815702`.
+    * **Keys/shapes:** `ts_train (280,)`, `ys_train (32, 280, 2)`, `us_train (32, 280, 1)`, `ts_vali (280,)`, `ys_vali (15, 280, 2)`, `us_vali (15, 280, 1)`.
+    * **Time grid:** `t = 0..1395s` with `Δt = 5s` (280 samples).
+    * **Entry points:** `experiments/thermal_food_processing_surrogate/noiseless/thermal_food_processing_surrogate_A.ipynb` and `experiments/thermal_food_processing_surrogate/noiseless/thermal_food_processing_surrogate_B.ipynb`.
+* **Paper benchmark config (run_A0):**
+    * **Save dir:** `experiments/thermal_food_processing_surrogate/noiseless/results/run_A0`.
+    * **Instances:** `num_instances = 20`.
+    * **Augmentations:** `max_range_augmentations = 3` (loops `num_aug = 0..3`).
+    * **Training:** `steps = 30_000`, `batch_size = 5`, `learning_rate = 1e-4`, 2x16 widths.
+    * **Training data:** `ys_train[:2]` / `us_train[:2]` (2 trajectories, 280 samples each).
+* **Run scripts:**
+    * **idev:** `bash scripts/idev/run_thermal_food_processing_surrogate.sh`.
+    * **slurm:** `sbatch scripts/slurm/run_thermal_food_processing_surrogate.slurm` (GPU; single-device notebook).
+    * **idev (noisy synthetic):** `bash scripts/idev/run_thermal_food_processing_surrogate_noisy.sh`.
+    * **slurm (noisy synthetic):** `sbatch scripts/slurm/run_thermal_food_processing_surrogate_noisy.slurm` (GPU; single-device training).
+* **Dataset visualization:**
+    * `experiments/thermal_food_processing_surrogate/noiseless/figures/thermal_food_processing_dataset.png` (train vs test median/IQR for `T_A`, `T_B`, and `T_oven`).
+![thermal_food_processing_dataset](experiments/thermal_food_processing_surrogate/noiseless/figures/thermal_food_processing_dataset.png)
+* **Benchmarking metrics (run_A0; stored in `error_measures.npz`, n=20 instances/model):**
+    * **Per-instance fields:** `train_rmse` / `test_rmse` (sPHNN‑LM uses `rmse_train` / `rmse_test` in existing files; used as train/test RMSE here).
+    * **Aggregate RMSE at n_A=3 (median [Q1, Q3]):**
+        | Model | Train RMSE | Test RMSE |
+        | --- | --- | --- |
+        | sPHNN | 0.170 [0.154, 0.220] | 1.43 [1.30, 1.69] |
+        | sPHNN-LM | 0.266 [0.207, 0.494] | 2.30 [1.77, 3.29] |
+        | cPHNN | 0.211 [0.163, 0.245] | 1.54 [1.48, 1.98] |
+        | PHNN | 1.32 [1.07, 1.44] | 23.8 [18.5, 43.8] |
+        | NODE | 0.337 [0.284, 0.431] | 4.36 [3.08, 5.79] |
+    * **Test RMSE medians by augmentation (n_A=0..3):**
+        * sPHNN: 4.27, 2.31, 1.78, 1.43
+        * sPHNN‑LM: 2.72, 2.93, 3.17, 2.30
+        * cPHNN: 2.46, 3.25, 1.65, 1.54
+        * PHNN: 3.64, 22.4, 28.2, 23.8
+        * NODE: 3.07, 3.25, 3.83, 4.36
+* **Shared storage copy (keep local cache too):**
+    * `mkdir -p $STOCKYARD/logan-shared/sphnn-publication/data/thermal_food_processing_surrogate`
+    * `rsync -av data/thermal_food_processing_surrogate/data.npz $STOCKYARD/logan-shared/sphnn-publication/data/thermal_food_processing_surrogate/`
+* **Noisy variant data note:**
+    * **Synthetic noise route (recommended):** set `THERMAL_FOOD_DATA_NPZ=data/thermal_food_processing_surrogate/data.npz` and `THERMAL_FOOD_NUM_TRAIN=2` (scripts do this) to inject noise on the cached `.npz` dataset.
+    * **Synthetic route metrics:** the cached `.npz` does not include the extra-long trajectory, so `rmse_long_data` is skipped unless raw CSVs are used.
+    * **Raw CSV route:** `experiments/thermal_food_processing_surrogate/noisy` can also load raw CSVs via `noisy_chicken_src/datareader.py`, which defaults to a Windows path (`C:\Users\...`). Point `data_dir` at the real dataset location on TACC before running if you prefer raw CSVs.
+* **Status (2026-02-03):**
+    * Data cache present; `run_A0` now has weights/history/error_measures for all models and augmentations.
+    * `thermal_food_processing_surrogate_A.executed.ipynb` produced by SLURM run.
+    * No noisy synthetic runs executed yet (scripts and env wiring are ready).
 
 ### 4. Additive Manufacturing / DED (Multiphysics)
 A complex industrial case study modeling the thermal field of a 3D printing process (Direct Energy Deposition) with a moving laser source.
@@ -532,6 +580,48 @@ A complex industrial case study modeling the thermal field of a 3D printing proc
 * **Dataset Specifics:**
     * **Generation:** High-fidelity Multiphysics FEM simulations.
     * **Evaluation:** Tested on **extrapolation** tasks, e.g., predicting thermal history for laser velocities $\boldsymbol{v}$ and powers $P$ not seen during training (e.g., $v=12.5$ mm/s).
+* **Data preparation and caching:**
+    * **Dataset files:** `data/additive_manufacturing_surrogate/data.npz` and `data/additive_manufacturing_surrogate/mesh.nas` (external).
+    * **Download:** Use the Dropbox link in `data/additive_manufacturing_surrogate/README.md` (place both files in the folder).
+    * **Entry point:** `experiments/thermal_field_data/additive_manufacturing_surrogate.ipynb`.
+    * **Path fix (Linux):** notebook uses `Path('../../data') / 'additive_manufacturing_surrogate'`; avoid Windows-style backslashes.
+    * **Checksums (SHA256):**
+        * `data.npz`: `023fe54275817a672ea9070b6168bccb754728274bbe5ca5b8c9c8c2968e8958`
+        * `mesh.nas`: `adba4417d21a7d83050d40fb28aea28c4fb3255182c3376402f410a38cb39797`
+* **Shared storage copy (keep local cache too):**
+    * `mkdir -p $STOCKYARD/logan-shared/sphnn-publication/data/additive_manufacturing_surrogate`
+    * `rsync -av data/additive_manufacturing_surrogate/data.npz $STOCKYARD/logan-shared/sphnn-publication/data/additive_manufacturing_surrogate/`
+    * `rsync -av data/additive_manufacturing_surrogate/mesh.nas $STOCKYARD/logan-shared/sphnn-publication/data/additive_manufacturing_surrogate/`
+    * **Shared path:** `$STOCKYARD/logan-shared/sphnn-publication/data/additive_manufacturing_surrogate`
+* **Benchmark config (run_0):**
+    * **Save dir:** `experiments/thermal_field_data/results/run_0`.
+    * **Latent sizes:** `latent_state_size = 40`, `latent_input_size = 40`.
+    * **Instances:** `num_instances = 20`.
+    * **Training parameters:** `[(10.0, 300.0), (20.0, 500.0)]` from `data['combinations']`.
+    * **Training:** `deriv_steps = 20000`, `traj_steps = 10000`, widths = 32, depth = 2.
+* **Run scripts:**
+    * **idev:** `bash scripts/idev/run_additive_manufacturing_surrogate.sh`.
+    * **slurm:** `sbatch scripts/slurm/run_additive_manufacturing_surrogate.slurm` (GPU; single-device notebook; skips PyVista by default via `SPHNN_SKIP_PV=1`).
+* **Dataset visualization:**
+    * `experiments/thermal_field_data/figures/additive_manufacturing_dataset.png` (train/test median + IQR of mean temperature and mean source over time).
+![additive_manufacturing_dataset](experiments/thermal_field_data/figures/additive_manufacturing_dataset.png)
+* **Benchmarking metrics (run_0; stored in `error_measures.npz`, n=20 instances/model):**
+    * **Per-instance fields:** `latent_train_rmse`, `latent_test_rmse`, `end_to_end_train_rmse`, `end_to_end_test_rmse`.
+    * **Aggregate end-to-end RMSE (median [Q1, Q3]):**
+        | Model | Train RMSE | Test RMSE |
+        | --- | --- | --- |
+        | sPHNN | 1.10 [1.03, 1.18] | 14.0 [13.0, 15.2] |
+        | sPHNN-LM | 1.11 [1.05, 1.19] | 15.1 [14.0, 15.9] |
+        | cPHNN | 4.34 [3.55, 6.10] | 55.6 [49.9, 59.2] |
+        | PHNN | 2.27e+03 [2.07e+03, 2.84e+03] | 2.72e+03 [2.35e+03, 3.56e+03] |
+        | NODE | 24.0 [10.1, 54.7] | 806 [457, 3.15e+03] |
+    * **Latent RMSE medians:** sPHNN 0.195 (test), sPHNN‑LM 0.211, cPHNN 0.775, NODE 11.2, PHNN 37.9.
+* **Benchmarking notes (run_0):**
+    * All 20 instances per model have `error_measures.npz` present.
+    * End‑to‑end RMSE shows strong stability gap: sPHNN/sPHNN‑LM stay low, cPHNN is higher but stable, PHNN/NODE diverge (orders of magnitude larger RMSE).
+* **Status (2026-02-03):**
+    * External data present; full `run_0` artifacts exist for all models (weights/history/error_measures).
+    * Shared copy staged at `$STOCKYARD/logan-shared/sphnn-publication/data/additive_manufacturing_surrogate`.
 
 
 

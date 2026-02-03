@@ -21,6 +21,20 @@ The data pertaining to the remaining experiments is included within this codebas
 
 Trained model weights are included and are loaded per default in each script. To rerun any experiment change the `save_dir` variable in each notebook under the section "Set Hyperparameters" to the new directory where the weights from the rerun should be saved.
 
+## Reproducing metrics and figures
+
+Thermal food processing (Section 4.3):
+- Summarize run_A0 metrics (n_A=3 by default):
+  - `python scripts/report_thermal_food_processing_metrics.py`
+- Regenerate dataset summary plot:
+  - `python scripts/plot_thermal_food_processing_dataset.py`
+
+Additive manufacturing surrogate (Section 4.4):
+- Summarize run_0 metrics:
+  - `python scripts/report_additive_manufacturing_metrics.py`
+- Regenerate dataset summary plot:
+  - `python scripts/plot_additive_manufacturing_dataset.py`
+
 ## Data caching
 
 The spinning rigid body experiment caches generated trajectories to avoid regenerating on every run:
